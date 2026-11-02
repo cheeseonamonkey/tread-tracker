@@ -12,7 +12,6 @@ import android.widget.RemoteViews
 import dev.treadtracker.app.MainActivity
 import dev.treadtracker.app.R
 import dev.treadtracker.app.data.StepDb
-import dev.treadtracker.app.service.StepService
 import dev.treadtracker.app.util.Dates
 import dev.treadtracker.app.util.NumFmt
 import dev.treadtracker.app.util.Prefs
@@ -26,14 +25,6 @@ import java.util.concurrent.Executors
  * system's periodic update, and whenever the launcher asks for onUpdate.
  */
 class StepsWidget : AppWidgetProvider() {
-
-    override fun onReceive(context: Context, intent: Intent) {
-        super.onReceive(context, intent)
-        when (intent.action) {
-            StepService.ACTION_UPDATE_WALK_COUNT,
-            StepService.ACTION_DAY_ROLLOVER -> requestUpdate(context)
-        }
-    }
 
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
         requestUpdate(context)

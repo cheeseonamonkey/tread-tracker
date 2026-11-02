@@ -242,30 +242,13 @@
                 android:textSize="14sp" />
         </LinearLayout>
 
-        <!-- Battery -->
-        <TextView
-            style="@style/SettingsSection"
-            android:text="@string/battery_title" />
-
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/battery_hint"
-            android:textColor="@color/text_secondary"
-            android:textSize="13sp" />
-
-        <Button
-            android:id="@+id/btn_battery"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="@string/battery_action" />
-
-        <TextView
-            android:id="@+id/battery_status"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="10dp"
+            android:padding="12dp"
+            android:background="@drawable/surface_card"
+            android:text="@string/tracking_limit"
             android:textColor="@color/text_secondary"
             android:textSize="13sp" />
 

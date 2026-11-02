@@ -2,9 +2,9 @@ package dev.treadtracker.app.data
 
 import android.content.ContentValues
 import android.content.Context
-import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteException
+import dev.treadtracker.app.util.Dates
 import android.database.sqlite.SQLiteOpenHelper
 
 /**
@@ -41,6 +41,10 @@ class StepDb(context: Context) :
                 "$COL_WALK_TIME INTEGER," +
                 "$COL_DISTANCE INTEGER)"
 
+        private const val CHECKPOINT_SQL =
+            "CREATE TABLE IF NOT EXISTS sensor_checkpoint(" +
+                "id INTEGER PRIMARY KEY CHECK(id=1), raw INTEGER NOT NULL, seen_at INTEGER NOT NULL)"
+
         private const val UNIQUE_INDEX_SQL =
             "CREATE UNIQUE INDEX IF NOT EXISTS index_day_walk_date_hour " +
                 "ON $TABLE($COL_DATE, $COL_HOUR)"
@@ -71,6 +75,7 @@ class StepDb(context: Context) :
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL(CREATE_SQL)
         db.execSQL(UNIQUE_INDEX_SQL)
+        db.execSQL(CHECKPOINT_SQL)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -82,6 +87,7 @@ class StepDb(context: Context) :
     override fun onOpen(db: SQLiteDatabase) {
         super.onOpen(db)
         ensureUniqueIndex(db)
+        db.execSQL(CHECKPOINT_SQL)
     }
 
     /**
@@ -110,6 +116,67 @@ class StepDb(context: Context) :
         } finally {
             db.endTransaction()
         }
+    }
+
+    /**
+     * Commit the cumulative sensor checkpoint and steps in one transaction.
+     * A fresh baseline, reboot/reset, or a gap across midnight yields no
+     * steps: the sensor does not tell us when steps were taken while inactive.
+     */
+    fun recordCounter(raw: Long, now: Long, kcal: Double, meters: Double): Int {
+        if (raw < 0) return 0
+        val sql = writableDatabase
+        sql.beginTransaction()
+        try {
+            var previousRaw = -1L
+            var previousAt = -1L
+            sql.rawQuery("SELECT raw,seen_at FROM sensor_checkpoint WHERE id=1", null).use {
+                if (it.moveToFirst()) {
+                    previousRaw = it.getLong(0)
+                    previousAt = it.getLong(1)
+                }
+            }
+            val delta = CounterDelta.between(previousRaw, previousAt, raw, now)
+            sql.execSQL(
+                "INSERT OR REPLACE INTO sensor_checkpoint(id,raw,seen_at) VALUES(1,?,?)",
+                arrayOf(raw, now)
+            )
+            if (delta > 0) incrementHour(sql, delta, now, kcal, meters, 0L)
+            sql.setTransactionSuccessful()
+            return delta
+        } finally {
+            sql.endTransaction()
+        }
+    }
+
+    fun recordSteps(steps: Int, now: Long, kcal: Double, meters: Double, activeMs: Long) {
+        if (steps <= 0) return
+        val sql = writableDatabase
+        sql.beginTransaction()
+        try {
+            incrementHour(sql, steps, now, kcal, meters, activeMs)
+            sql.setTransactionSuccessful()
+        } finally {
+            sql.endTransaction()
+        }
+    }
+
+    private fun incrementHour(
+        sql: SQLiteDatabase, steps: Int, now: Long,
+        kcal: Double, meters: Double, activeMs: Long
+    ) {
+        val date = Dates.dayStart(now)
+        val hour = Dates.hourOfDay(now)
+        val row = sql.query(TABLE,
+            arrayOf(COL_COUNT, COL_CAL, COL_WALK_TIME, COL_DISTANCE),
+            "$COL_DATE=? AND $COL_HOUR=?",
+            arrayOf(date.toString(), hour.toString()), null, null, null
+        ).use {
+            if (it.moveToFirst()) HourRow(it.getLong(0), it.getDouble(1),
+                it.getLong(2), it.getDouble(3)) else HourRow()
+        }
+        row.addSteps(steps, kcal, meters, activeMs)
+        upsertHour(date, hour, row)
     }
 
     /** Insert or update the absolute totals of one (date, hour) row. */

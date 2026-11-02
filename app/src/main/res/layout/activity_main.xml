@@ -18,8 +18,8 @@
             android:orientation="horizontal"
             android:paddingStart="22dp"
             android:paddingEnd="16dp"
-            android:paddingTop="19dp"
-            android:paddingBottom="19dp">
+            android:paddingTop="14dp"
+            android:paddingBottom="14dp">
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -30,15 +30,15 @@
                     android:layout_height="wrap_content"
                     android:text="@string/app_name"
                     android:textColor="#F3F0E7"
-                    android:textSize="22sp"
+                    android:textSize="20sp"
                     android:textStyle="bold" />
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:letterSpacing="0.19"
+                    android:letterSpacing="0.12"
                     android:text="@string/brand_subtitle"
-                    android:textColor="#75BAA2"
+                    android:textColor="#E8AE8B"
                     android:textSize="10sp" />
             </LinearLayout>
             <ImageButton

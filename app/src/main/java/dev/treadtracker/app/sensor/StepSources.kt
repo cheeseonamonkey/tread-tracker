@@ -27,41 +27,22 @@ interface StepSource {
  */
 class HardwareStepSource(
     context: Context,
-    private val listener: StepSource.Listener
+    private val onReading: (Long, Long) -> Unit
 ) : StepSource, SensorEventListener {
-
     override val isHardware = true
-
-    private val sensorManager =
-        context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-    private val sensor: Sensor? =
-        sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
-    private var lastRaw = -1L
-
-    val available: Boolean get() = sensor != null
+    private val manager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+    private val sensor = manager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
+    val available get() = sensor != null
 
     override fun start() {
-        val s = sensor ?: return
-        sensorManager.registerListener(this, s, SensorManager.SENSOR_DELAY_NORMAL)
+        sensor?.let { manager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL) }
     }
 
-    override fun stop() {
-        sensorManager.unregisterListener(this)
-        lastRaw = -1
-    }
+    override fun stop() = manager.unregisterListener(this)
 
     override fun onSensorChanged(event: SensorEvent) {
-        if (event.sensor.type != Sensor.TYPE_STEP_COUNTER) return
-        val raw = event.values[0].toLong()
-        if (lastRaw < 0) {
-            lastRaw = raw
-            return
-        }
-        var delta = raw - lastRaw
-        if (delta < 0) delta = raw // counter reset after reboot
-        lastRaw = raw
-        if (delta > 0 && delta < 100_000) {
-            listener.onSteps(delta.toInt(), System.currentTimeMillis())
+        if (event.sensor.type == Sensor.TYPE_STEP_COUNTER) {
+            onReading(event.values[0].toLong(), System.currentTimeMillis())
         }
     }
 

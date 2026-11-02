@@ -95,13 +95,6 @@ object Prefs {
         sp(context).edit().putBoolean("service_enabled", enabled).apply()
     }
 
-    fun isBatteryPromptShown(context: Context): Boolean =
-        sp(context).getBoolean("battery_prompt_shown", false)
-
-    fun setBatteryPromptShown(context: Context) {
-        sp(context).edit().putBoolean("battery_prompt_shown", true).apply()
-    }
-
     /** Approximate kcal per step for the current weight. */
     fun kcalPerStep(context: Context): Double = weightKg(context) * 0.0005
 

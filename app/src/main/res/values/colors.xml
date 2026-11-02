@@ -1,18 +1,17 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="background">#F1EEE6</color>
-    <color name="surface">#FFFCF5</color>
-    <color name="surface_border">#DBDED5</color>
-    <color name="text_primary">#1A2926</color>
-    <color name="text_secondary">#65736C</color>
-    <color name="accent">#2E8169</color>
-    <color name="tab_selected">#216A56</color>
-    <color name="graph_track">#D5DED7</color>
-    <color name="header_day">#182522</color>
-    <color name="banner_bg">#F0E3BE</color>
-    <color name="banner_text">#544823</color>
-    <color name="widget_surface">#FFFCF5</color>
-    <color name="widget_stroke">#DBDED5</color>
-    <color name="widget_text">#1A2926</color>
-    <color name="widget_text_secondary">#65736C</color>
+    <color name="background">#F2F0E9</color>
+    <color name="surface">#FCFBF7</color>
+    <color name="surface_border">#DBDDD5</color>
+    <color name="text_primary">#27302D</color>
+    <color name="text_secondary">#64736B</color>
+    <color name="accent">#A75C37</color>
+    <color name="tab_selected">#A75C37</color>
+    <color name="graph_track">#E1E3DA</color>
+    <color name="header_day">#26302E</color>
+    <color name="banner_bg">#F0E2CD</color>
+    <color name="banner_text">#63432D</color>
+    <color name="widget_surface">#FCFBF7</color>
+    <color name="widget_stroke">#DBDDD5</color>
+    <color name="widget_text">#27302D</color>
+    <color name="widget_text_secondary">#64736B</color>
 </resources>

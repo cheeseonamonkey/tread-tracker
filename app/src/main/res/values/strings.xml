@@ -14,7 +14,7 @@
     <string name="step_count_label">STEP COUNT</string>
     <string name="your_activity">ACTIVITY</string>
     <string name="swipe_hint">Swipe sideways for earlier days</string>
-    <string name="brand_subtitle">STEPS, NOTHING ELSE.</string>
+    <string name="brand_subtitle">TRACKS WHILE OPEN</string>
 
     <string name="permission_banner_text">Step counting needs the Activity Recognition permission.</string>
     <string name="permission_grant">Grant</string>
@@ -31,9 +31,9 @@
     <string name="pref_goal">Daily goal (steps)</string>
     <string name="pref_miles">Show distances in miles</string>
     <string name="pref_first_day">First day of week</string>
-    <string name="pref_counting">Count steps in the background</string>
+    <string name="pref_counting">Track while app is open</string>
     <string name="pref_sensitivity">Sensitivity</string>
-    <string name="pref_sensitivity_hint">Only used when the device has no hardware step counter and the accelerometer fallback is active.</string>
+    <string name="pref_sensitivity_hint">Fallback for phones without a hardware step counter. Counting stops when you close the app.</string>
 
     <string name="unit_kg">kg</string>
     <string name="unit_lb">lb</string>
@@ -44,19 +44,10 @@
     <string name="monday">Mon</string>
     <string name="saturday">Sat</string>
 
-    <string name="battery_title">Battery</string>
-    <string name="battery_hint">Excluding the app from battery optimization keeps counting reliable on aggressive devices.</string>
-    <string name="battery_action">Allow background counting</string>
-    <string name="battery_ok">Battery optimization is already off for this app.</string>
-    <string name="battery_not_ok">Battery optimization is on. Counting may be interrupted while the screen is off.</string>
-    <string name="battery_unavailable">Could not open battery settings on this device.</string>
+    <string name="tracking_limit">No persistent notification or background service. Counting only works while Tread Tracker is open; steps taken after closing it may be missed.</string>
 
     <string name="about_title">About</string>
-    <string name="about_body">Tread Tracker v%1$s. An offline step counter. No ads, accounts, analytics, or internet access. Your steps stay on your device. Add the widget from your launcher.</string>
-
-    <string name="notification_counting">%1$s steps today</string>
-    <string name="notification_counting_zero">Counting your steps</string>
-    <string name="channel_description">Keeps step counting running in the background.</string>
+    <string name="about_body">Tread Tracker v%1$s. An offline, notification-free step counter. No ads, accounts, analytics, or internet access. Your steps stay on your device. Add the widget from your launcher.</string>
 
     <string name="widget_label">TREAD / TODAY</string>
     <string name="widget_of_goal">of %1$s</string>

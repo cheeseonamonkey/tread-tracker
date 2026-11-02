@@ -46,12 +46,12 @@ jobs:
       - name: Check offline-only manifest
         shell: bash
         run: |
-          if grep -Eq 'android.permission.(INTERNET|ACCESS_NETWORK_STATE)|com.google.android.gms.ads|com.facebook.ads' app/src/main/AndroidManifest.xml; then
+          if grep -Eq 'android.permission.(INTERNET|ACCESS_NETWORK_STATE|FOREGROUND_SERVICE|POST_NOTIFICATIONS|WAKE_LOCK|REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)|com.google.android.gms.ads|com.facebook.ads' app/src/main/AndroidManifest.xml; then
             echo 'Unexpected network or ad component in manifest' >&2
             exit 1
           fi
       - name: Lint and build APKs
-        run: ./gradlew --no-daemon :app:lintDebug :app:assembleDebug :app:assembleRelease
+        run: ./gradlew --no-daemon :app:testDebugUnitTest :app:lintDebug :app:assembleDebug :app:assembleRelease
       - uses: actions/upload-artifact@v4
         with:
           name: tread-tracker-debug-apk

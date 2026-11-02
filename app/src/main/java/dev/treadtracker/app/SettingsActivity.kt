@@ -1,15 +1,9 @@
 package dev.treadtracker.app
 
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
-import android.os.PowerManager
 import android.widget.SeekBar
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import dev.treadtracker.app.databinding.ActivitySettingsBinding
-import dev.treadtracker.app.service.StepService
 import dev.treadtracker.app.util.Dates
 import dev.treadtracker.app.util.Prefs
 import java.util.Locale
@@ -36,11 +30,6 @@ class SettingsActivity : AppCompatActivity() {
         binding.switchCounting.isChecked = Prefs.isCountingEnabled(this)
         binding.switchCounting.setOnCheckedChangeListener { _, checked ->
             Prefs.setCountingEnabled(this, checked)
-            if (checked) {
-                StepService.start(this)
-            } else {
-                StepService.stop(this)
-            }
         }
 
         // ---- weight
@@ -99,20 +88,6 @@ class SettingsActivity : AppCompatActivity() {
             override fun onStopTrackingTouch(bar: SeekBar?) = Unit
         })
 
-        // ---- battery
-        binding.btnBattery.setOnClickListener {
-            try {
-                startActivity(
-                    Intent(
-                        android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-                        Uri.parse("package:$packageName")
-                    )
-                )
-            } catch (e: Exception) {
-                Toast.makeText(this, R.string.battery_unavailable, Toast.LENGTH_SHORT).show()
-            }
-        }
-
         // ---- about
         binding.aboutBody.text = getString(
             R.string.about_body,
@@ -122,7 +97,6 @@ class SettingsActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        refreshBatteryStatus()
     }
 
     override fun onPause() {
@@ -148,17 +122,6 @@ class SettingsActivity : AppCompatActivity() {
         Prefs.setSensitivity(this, binding.sensitivity.progress + 10)
     }
 
-    private fun refreshBatteryStatus() {
-        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
-        binding.batteryStatus.setText(
-            if (pm.isIgnoringBatteryOptimizations(packageName)) {
-                R.string.battery_ok
-            } else {
-                R.string.battery_not_ok
-            }
-        )
-    }
-
     /** Convert an EditText number between metric and imperial on unit toggle. */
     private fun convertField(field: android.widget.EditText, toMetric: Boolean, ratio: Double) {
         val value = field.text.toString().toDoubleOrNull() ?: return
@@ -167,6 +130,6 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     companion object {
-        private const val BuildConfig_VERSION_NAME = "1.0.0"
+        private const val BuildConfig_VERSION_NAME = "1.0.1"
     }
 }

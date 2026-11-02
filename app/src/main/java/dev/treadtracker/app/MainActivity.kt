@@ -1,22 +1,15 @@
 package dev.treadtracker.app
 
 import android.Manifest
-import android.content.BroadcastReceiver
-import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
+import android.app.NotificationManager
 import android.os.Looper
-import android.os.PowerManager
 import android.view.View
-import android.widget.TextView
-import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
@@ -24,7 +17,7 @@ import androidx.viewpager2.widget.ViewPager2
 import dev.treadtracker.app.data.StepDb
 import dev.treadtracker.app.databinding.ActivityMainBinding
 import dev.treadtracker.app.databinding.PageStatsBinding
-import dev.treadtracker.app.service.StepService
+import dev.treadtracker.app.sensor.StepRecorder
 import dev.treadtracker.app.util.Dates
 import dev.treadtracker.app.util.NumFmt
 import dev.treadtracker.app.util.Prefs
@@ -66,6 +59,14 @@ class MainActivity : AppCompatActivity() {
     private val db = lazy { StepDb(this) }
     private val dbExecutor = Executors.newSingleThreadExecutor()
     private val mainHandler = Handler(Looper.getMainLooper())
+    private val recorder by lazy { StepRecorder(this, db.value, dbExecutor) {
+        mainHandler.post {
+            if (!isFinishing && !isDestroyed) {
+                if (periods.lastOrNull()?.end?.let { it < Dates.today() } == true) reload()
+                else refreshCurrentPage()
+            }
+        }
+    } }
 
     private var currentTab = TAB_DAY
     private val savedPositions = IntArray(3)
@@ -79,17 +80,6 @@ class MainActivity : AppCompatActivity() {
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
             refreshPermissionBanner()
         }
-
-    private val updateReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            when (intent.action) {
-                StepService.ACTION_UPDATE_WALK_COUNT -> refreshCurrentPage()
-                StepService.ACTION_DAY_ROLLOVER,
-                Intent.ACTION_TIME_CHANGED,
-                Intent.ACTION_TIMEZONE_CHANGED -> reload()
-            }
-        }
-    }
 
     // ------------------------------------------------------------- lifecycle
 
@@ -115,34 +105,29 @@ class MainActivity : AppCompatActivity() {
         }
         binding.btnGrant.setOnClickListener { requestNeededPermissions() }
 
-        if (Prefs.isCountingEnabled(this)) {
-            StepService.start(this)
+        // Clear any v1.0 foreground notification/channel after upgrading.
+        getSystemService(NotificationManager::class.java)?.apply {
+            cancel(1564)
+            if (Build.VERSION.SDK_INT >= 26) deleteNotificationChannel("step_service")
         }
-
-        ContextCompat.registerReceiver(
-            this, updateReceiver,
-            IntentFilter().apply {
-                addAction(StepService.ACTION_UPDATE_WALK_COUNT)
-                addAction(StepService.ACTION_DAY_ROLLOVER)
-                addAction(Intent.ACTION_TIME_CHANGED)
-                addAction(Intent.ACTION_TIMEZONE_CHANGED)
-            },
-            ContextCompat.RECEIVER_NOT_EXPORTED
-        )
 
         styleTabs()
         requestNeededPermissions()
-        maybePromptBattery()
     }
 
     override fun onStart() {
         super.onStart()
         refreshPermissionBanner()
+        if (hasRecognition()) recorder.start()
         reload()
     }
 
+    override fun onStop() {
+        recorder.stop()
+        super.onStop()
+    }
+
     override fun onDestroy() {
-        unregisterReceiver(updateReceiver)
         dbExecutor.shutdown()
         try {
             dbExecutor.awaitTermination(2, java.util.concurrent.TimeUnit.SECONDS)
@@ -285,6 +270,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun refreshCurrentPage() {
         if (periods.isNotEmpty()) {
+            pageCache.clear()
             val pos = binding.pager.currentItem
             if (pos in periods.indices) pagesAdapter.notifyItemChanged(pos)
         }
@@ -302,12 +288,6 @@ class MainActivity : AppCompatActivity() {
         if (Build.VERSION.SDK_INT >= 29 && !hasRecognition()) {
             wanted.add(Manifest.permission.ACTIVITY_RECOGNITION)
         }
-        if (Build.VERSION.SDK_INT >= 33 &&
-            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
-            PackageManager.PERMISSION_GRANTED
-        ) {
-            wanted.add(Manifest.permission.POST_NOTIFICATIONS)
-        }
         if (wanted.isNotEmpty()) {
             permLauncher.launch(wanted.toTypedArray())
         }
@@ -317,35 +297,9 @@ class MainActivity : AppCompatActivity() {
     private fun refreshPermissionBanner() {
         val granted = hasRecognition()
         binding.permissionBanner.visibility = if (granted) View.GONE else View.VISIBLE
-        // Once recognition is granted the foreground service can start
-        // (health FGS type requires it on Android 14+).
-        if (granted && Prefs.isCountingEnabled(this)) {
-            StepService.start(this)
+        if (granted && lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) {
+            recorder.start()
         }
-    }
-
-    private fun maybePromptBattery() {
-        if (Prefs.isBatteryPromptShown(this)) return
-        Prefs.setBatteryPromptShown(this)
-        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
-        if (pm.isIgnoringBatteryOptimizations(packageName)) return
-        AlertDialog.Builder(this)
-            .setTitle(R.string.battery_title)
-            .setMessage(R.string.battery_hint)
-            .setPositiveButton(R.string.battery_action) { _, _ ->
-                try {
-                    startActivity(
-                        Intent(
-                            android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-                            Uri.parse("package:$packageName")
-                        )
-                    )
-                } catch (e: Exception) {
-                    Toast.makeText(this, R.string.battery_unavailable, Toast.LENGTH_SHORT).show()
-                }
-            }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
     }
 
     // --------------------------------------------------------------- adapter

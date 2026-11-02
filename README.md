@@ -1,11 +1,11 @@
 # Tread Tracker
 
-A small, offline Android step counter. No ads, analytics, accounts, or network permission.
+A small, offline Android step counter. No ads, analytics, accounts, network permission, or persistent notification.
 
 - Hardware step counter, with accelerometer fallback.
 - Daily goal, hourly/day/week/month history, distance, calories, active time.
-- Background foreground-service counting, reboot restart, home-screen widget.
-- Light/dark notebook-inspired UI, boot-tread icon, Android themed icon.
+- Activity-scoped counting (no foreground service or persistent notification), home-screen widget with periodic refresh.
+- Light/dark utilitarian UI, side-profile sneaker icon, Android themed icon.
 - Kotlin and regular Android views; no Compose, Material Components, native libraries, or ad SDKs.
 
 ## Build
@@ -41,7 +41,13 @@ For signed release artifacts and automatic GitHub Releases on version tags, conf
 
 ## Privacy
 
-All step data is stored locally in SQLite. There is no `INTERNET` or `ACCESS_NETWORK_STATE` permission, advertising SDK, analytics SDK, or telemetry endpoint. Background counting requires activity recognition and foreground-service permissions; Android 13+ may separately prompt for notification permission. No other personal data is uploaded.
+All step data is stored locally in SQLite. There is no `INTERNET` or `ACCESS_NETWORK_STATE` permission, advertising SDK, analytics SDK, or telemetry endpoint. Counting requires activity recognition on Android 10+. It does not request notification, foreground-service, wake-lock, or battery-exemption permissions. No other personal data is uploaded.
+
+## Notification-free mode (v1.0.1+)
+
+The sensor listener runs **only while the app is visible**. Android does not guarantee step counting after it stops; a hardware step counter may retain cumulative steps while it remains activated, but it is **not** a reliable background-history source once unregistered. The app can reconcile same-day changes reported by the hardware sensor, but discards gaps crossing midnight rather than assigning them to the wrong date. Without a hardware counter, accelerometer tracking only works while the app is open. Widgets show the latest stored total and refresh periodically; they do not activate background counting.
+
+This trades guaranteed background coverage for absolutely no persistent notification or foreground service.
 
 ## Installation and data
 
