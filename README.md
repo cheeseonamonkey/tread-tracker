@@ -53,6 +53,11 @@ This trades guaranteed background coverage for absolutely no persistent notifica
 
 Package ID: `dev.treadtracker.app`. This is a **new app**, not an in-place update to `com.tayu.tau.pedometer`. The original app's database and preferences are **not migrated**. Back up data from the original app before uninstalling it.
 
+## Credits
+
+- Development: [@cheeseonamonkey](https://github.com/cheeseonamonkey)
+- QA: Stormy (meow)
+
 ## Provenance
 
 Rebranded from the user-provided clean Kotlin pedometer rebuild. It replaces the original proprietary app's ad/telemetry-heavy distribution and native step detector with an offline Kotlin implementation. Review upstream rights/attribution before redistributing publicly. No license is inferred from the supplied archive.
