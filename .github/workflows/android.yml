@@ -12,6 +12,8 @@ permissions:
 
 jobs:
   apk:
+    outputs:
+      signed: ${{ steps.signing.outputs.signed }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -33,14 +35,13 @@ jobs:
       - name: Install Android SDK
         run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
       - name: Configure release signing
+        id: signing
         shell: bash
         run: |
           if [[ -n "$TREAD_KEYSTORE_BASE64" ]]; then
             printf '%s' "$TREAD_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/tread-release.jks"
             echo "TREAD_KEYSTORE_PATH=$RUNNER_TEMP/tread-release.jks" >> "$GITHUB_ENV"
-          elif [[ "$GITHUB_REF" == refs/tags/v* ]]; then
-            echo 'Tag releases require the four TREAD_KEYSTORE_* secrets.' >&2
-            exit 1
+            echo "signed=true" >> "$GITHUB_OUTPUT"
           fi
       - name: Check offline-only manifest
         shell: bash
@@ -57,6 +58,12 @@ jobs:
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
+        if: env.TREAD_KEYSTORE_BASE64 == ''
+        with:
+          name: tread-tracker-unsigned-release-apk
+          path: app/build/outputs/apk/release/*-unsigned.apk
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
         if: env.TREAD_KEYSTORE_BASE64 != ''
         with:
           name: tread-tracker-signed-release-apk
@@ -64,7 +71,7 @@ jobs:
           if-no-files-found: error
 
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') && needs.apk.outputs.signed == 'true'
     needs: apk
     runs-on: ubuntu-latest
     permissions:
