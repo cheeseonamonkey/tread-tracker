@@ -1,0 +1,78 @@
+name: Android
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      TREAD_KEYSTORE_BASE64: ${{ github.event_name != 'pull_request' && secrets.TREAD_KEYSTORE_BASE64 || '' }}
+      TREAD_KEYSTORE_PASSWORD: ${{ github.event_name != 'pull_request' && secrets.TREAD_KEYSTORE_PASSWORD || '' }}
+      TREAD_KEY_ALIAS: ${{ github.event_name != 'pull_request' && secrets.TREAD_KEY_ALIAS || '' }}
+      TREAD_KEY_PASSWORD: ${{ github.event_name != 'pull_request' && secrets.TREAD_KEY_PASSWORD || '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - name: Configure release signing
+        shell: bash
+        run: |
+          if [[ -n "$TREAD_KEYSTORE_BASE64" ]]; then
+            printf '%s' "$TREAD_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/tread-release.jks"
+            echo "TREAD_KEYSTORE_PATH=$RUNNER_TEMP/tread-release.jks" >> "$GITHUB_ENV"
+          elif [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo 'Tag releases require the four TREAD_KEYSTORE_* secrets.' >&2
+            exit 1
+          fi
+      - name: Check offline-only manifest
+        shell: bash
+        run: |
+          if grep -Eq 'android.permission.(INTERNET|ACCESS_NETWORK_STATE)|com.google.android.gms.ads|com.facebook.ads' app/src/main/AndroidManifest.xml; then
+            echo 'Unexpected network or ad component in manifest' >&2
+            exit 1
+          fi
+      - name: Lint and build APKs
+        run: ./gradlew --no-daemon :app:lintDebug :app:assembleDebug :app:assembleRelease
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tread-tracker-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: env.TREAD_KEYSTORE_BASE64 != ''
+        with:
+          name: tread-tracker-signed-release-apk
+          path: app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: apk
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: tread-tracker-signed-release-apk
+          path: dist
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/app-release.apk
+          fail_on_unmatched_files: true

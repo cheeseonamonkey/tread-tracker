@@ -1,0 +1,11 @@
+# Generated and machine-specific
+.gradle/
+**/build/
+local.properties
+.idea/
+*.iml
+*.apk
+*.aab
+*.keystore
+*.jks
+.DS_Store

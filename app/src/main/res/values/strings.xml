@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Tread Tracker</string>
+
+    <string name="tab_day">Day</string>
+    <string name="tab_week">Week</string>
+    <string name="tab_month">Month</string>
+
+    <string name="steps">steps</string>
+    <string name="stat_distance">Distance</string>
+    <string name="stat_calories">Calories</string>
+    <string name="stat_duration">Time</string>
+    <string name="goal_caption">%1$d%% of daily goal</string>
+    <string name="step_count_label">STEP COUNT</string>
+    <string name="your_activity">ACTIVITY</string>
+    <string name="swipe_hint">Swipe sideways for earlier days</string>
+    <string name="brand_subtitle">STEPS, NOTHING ELSE.</string>
+
+    <string name="permission_banner_text">Step counting needs the Activity Recognition permission.</string>
+    <string name="permission_grant">Grant</string>
+
+    <string name="back">Back</string>
+    <string name="settings_title">Settings</string>
+
+    <string name="section_profile">Profile</string>
+    <string name="section_display">Display</string>
+    <string name="section_counting">Counting</string>
+
+    <string name="pref_weight">Weight</string>
+    <string name="pref_step_length">Step length</string>
+    <string name="pref_goal">Daily goal (steps)</string>
+    <string name="pref_miles">Show distances in miles</string>
+    <string name="pref_first_day">First day of week</string>
+    <string name="pref_counting">Count steps in the background</string>
+    <string name="pref_sensitivity">Sensitivity</string>
+    <string name="pref_sensitivity_hint">Only used when the device has no hardware step counter and the accelerometer fallback is active.</string>
+
+    <string name="unit_kg">kg</string>
+    <string name="unit_lb">lb</string>
+    <string name="unit_cm">cm</string>
+    <string name="unit_in">in</string>
+
+    <string name="sunday">Sun</string>
+    <string name="monday">Mon</string>
+    <string name="saturday">Sat</string>
+
+    <string name="battery_title">Battery</string>
+    <string name="battery_hint">Excluding the app from battery optimization keeps counting reliable on aggressive devices.</string>
+    <string name="battery_action">Allow background counting</string>
+    <string name="battery_ok">Battery optimization is already off for this app.</string>
+    <string name="battery_not_ok">Battery optimization is on. Counting may be interrupted while the screen is off.</string>
+    <string name="battery_unavailable">Could not open battery settings on this device.</string>
+
+    <string name="about_title">About</string>
+    <string name="about_body">Tread Tracker v%1$s. An offline step counter. No ads, accounts, analytics, or internet access. Your steps stay on your device. Add the widget from your launcher.</string>
+
+    <string name="notification_counting">%1$s steps today</string>
+    <string name="notification_counting_zero">Counting your steps</string>
+    <string name="channel_description">Keeps step counting running in the background.</string>
+
+    <string name="widget_label">TREAD / TODAY</string>
+    <string name="widget_of_goal">of %1$s</string>
+    <string name="widget_description">Tread Tracker: today\'s steps and daily goal progress.</string>
+</resources>
