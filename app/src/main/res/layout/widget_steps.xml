@@ -6,7 +6,7 @@
     android:background="@drawable/widget_bg"
     android:gravity="center_vertical|start"
     android:orientation="vertical"
-    android:padding="18dp">
+    android:padding="12dp">
 
     <TextView
         android:id="@+id/widget_label"
@@ -24,15 +24,15 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
         android:textColor="@color/widget_text"
-        android:textSize="38sp"
+        android:textSize="40sp"
         android:textStyle="bold" />
 
     <ProgressBar
         android:id="@+id/widget_progress"
         style="?android:attr/progressBarStyleHorizontal"
         android:layout_width="match_parent"
-        android:layout_height="8dp"
-        android:layout_marginTop="8dp"
+        android:layout_height="6dp"
+        android:layout_marginTop="5dp"
         android:progressDrawable="@drawable/widget_progress" />
 
     <TextView

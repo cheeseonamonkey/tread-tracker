@@ -49,6 +49,10 @@
     <string name="about_title">About</string>
     <string name="about_body">Tread Tracker v%1$s. An offline, notification-free step counter. No ads, accounts, analytics, or internet access. Your steps stay on your device. Add the widget from your launcher.</string>
 
+    <string name="credit_development">Development: @cheeseonamonkey</string>
+    <string name="credit_qa">QA: Stormy (meow)</string>
+    <string name="widget_accessibility">%1$s steps today</string>
+
     <string name="widget_label">TREAD / TODAY</string>
     <string name="widget_of_goal">of %1$s</string>
     <string name="widget_description">Tread Tracker: today\'s steps and daily goal progress.</string>

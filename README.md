@@ -4,7 +4,7 @@ A small, offline Android step counter. No ads, analytics, accounts, network perm
 
 - Hardware step counter, with accelerometer fallback.
 - Daily goal, hourly/day/week/month history, distance, calories, active time.
-- Activity-scoped counting (no foreground service or persistent notification), home-screen widget with periodic refresh.
+- Activity-scoped counting (no foreground service or persistent notification), resize-aware home-screen widget (compact 1×1 to expanded layouts).
 - Light/dark utilitarian UI, side-profile sneaker icon, Android themed icon.
 - Kotlin and regular Android views; no Compose, Material Components, native libraries, or ad SDKs.
 
@@ -52,6 +52,10 @@ This trades guaranteed background coverage for absolutely no persistent notifica
 ## Installation and data
 
 Package ID: `dev.treadtracker.app`. This is a **new app**, not an in-place update to `com.tayu.tau.pedometer`. The original app's database and preferences are **not migrated**. Back up data from the original app before uninstalling it.
+
+The widget supports both horizontal and vertical resizing, with compact layouts for small launcher cells and size-aware layouts on Android 12+. Available sizes depend on the launcher.
+
+The installed app also shows its development and QA credits under **Settings → About**.
 
 ## Credits
 

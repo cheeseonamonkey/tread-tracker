@@ -264,5 +264,21 @@
             android:lineSpacingExtra="3dp"
             android:textColor="@color/text_secondary"
             android:textSize="13sp" />
+        <TextView
+            android:id="@+id/credits_developer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="15dp"
+            android:text="@string/credit_development"
+            android:textColor="@color/text_primary"
+            android:textColorLink="@color/accent"
+            android:textSize="14sp" />
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:text="@string/credit_qa"
+            android:textColor="@color/text_primary"
+            android:textSize="14sp" />
     </LinearLayout>
 </ScrollView>

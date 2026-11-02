@@ -1,11 +1,16 @@
 package dev.treadtracker.app
 
 import android.os.Bundle
+import android.text.Spannable
+import android.text.SpannableString
+import android.text.method.LinkMovementMethod
+import android.text.style.URLSpan
 import android.widget.SeekBar
 import androidx.appcompat.app.AppCompatActivity
 import dev.treadtracker.app.databinding.ActivitySettingsBinding
 import dev.treadtracker.app.util.Dates
 import dev.treadtracker.app.util.Prefs
+import dev.treadtracker.app.widget.StepsWidget
 import java.util.Locale
 
 /**
@@ -88,7 +93,14 @@ class SettingsActivity : AppCompatActivity() {
             override fun onStopTrackingTouch(bar: SeekBar?) = Unit
         })
 
-        // ---- about
+        // ---- about: visible in the installed app, not just the repository.
+        val credit = SpannableString(getString(R.string.credit_development))
+        val handle = "@cheeseonamonkey"
+        credit.setSpan(URLSpan("https://github.com/cheeseonamonkey"),
+            credit.indexOf(handle), credit.indexOf(handle) + handle.length,
+            Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+        binding.creditsDeveloper.text = credit
+        binding.creditsDeveloper.movementMethod = LinkMovementMethod.getInstance()
         binding.aboutBody.text = getString(
             R.string.about_body,
             BuildConfig_VERSION_NAME
@@ -120,6 +132,7 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         Prefs.setSensitivity(this, binding.sensitivity.progress + 10)
+        StepsWidget.refresh(this)
     }
 
     /** Convert an EditText number between metric and imperial on unit toggle. */
@@ -130,6 +143,6 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     companion object {
-        private const val BuildConfig_VERSION_NAME = "1.0.1"
+        private const val BuildConfig_VERSION_NAME = "1.0.2"
     }
 }
