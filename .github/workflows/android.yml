@@ -22,12 +22,11 @@ jobs:
       TREAD_KEY_PASSWORD: ${{ github.event_name != 'pull_request' && secrets.TREAD_KEY_PASSWORD || '' }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
-      - uses: android-actions/setup-android@v3
       - name: Install Android SDK
         run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
       - name: Configure release signing
