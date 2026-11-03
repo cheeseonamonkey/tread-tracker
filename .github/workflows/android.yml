@@ -43,10 +43,15 @@ jobs:
             echo "TREAD_KEYSTORE_PATH=$RUNNER_TEMP/tread-release.jks" >> "$GITHUB_ENV"
             echo "signed=true" >> "$GITHUB_OUTPUT"
           fi
+      - name: Validate background tracking manifest
+        run: |
+          grep -q 'android.permission.FOREGROUND_SERVICE_HEALTH' app/src/main/AndroidManifest.xml
+          grep -q 'android.permission.RECEIVE_BOOT_COMPLETED' app/src/main/AndroidManifest.xml
+          grep -q 'android:foregroundServiceType="health"' app/src/main/AndroidManifest.xml
       - name: Check offline-only manifest
         shell: bash
         run: |
-          if grep -Eq 'android.permission.(INTERNET|ACCESS_NETWORK_STATE|FOREGROUND_SERVICE|POST_NOTIFICATIONS|WAKE_LOCK|REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)|com.google.android.gms.ads|com.facebook.ads' app/src/main/AndroidManifest.xml; then
+          if grep -Eq 'android.permission.(INTERNET|ACCESS_NETWORK_STATE|REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)|com.google.android.gms.ads|com.facebook.ads' app/src/main/AndroidManifest.xml; then
             echo 'Unexpected network or ad component in manifest' >&2
             exit 1
           fi

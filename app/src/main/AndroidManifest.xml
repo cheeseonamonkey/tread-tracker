@@ -3,9 +3,13 @@
 
     <!-- Core step counting -->
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
-    <!-- No service, notification, network, or battery-exemption permissions. -->
+    <!-- Persistent background tracking uses Android's health foreground service. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
-    <!-- No network or advertising permissions. -->
+    <!-- No network or advertising permissions. Notification permission is optional. -->
 
     <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="false" />
     <uses-feature android:name="android.hardware.sensor.stepcounter" android:required="false" />
@@ -32,6 +36,18 @@
             android:name=".SettingsActivity"
             android:exported="false"
             android:label="@string/settings_title" />
+
+        <service
+            android:name=".service.StepService"
+            android:exported="false"
+            android:foregroundServiceType="health" />
+
+        <receiver android:name=".service.BootReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
 
         <receiver
             android:name=".widget.StepsWidget"

@@ -11,6 +11,7 @@ import dev.treadtracker.app.databinding.ActivitySettingsBinding
 import dev.treadtracker.app.util.Dates
 import dev.treadtracker.app.util.Prefs
 import dev.treadtracker.app.widget.StepsWidget
+import dev.treadtracker.app.service.StepService
 import java.util.Locale
 
 /**
@@ -35,6 +36,7 @@ class SettingsActivity : AppCompatActivity() {
         binding.switchCounting.isChecked = Prefs.isCountingEnabled(this)
         binding.switchCounting.setOnCheckedChangeListener { _, checked ->
             Prefs.setCountingEnabled(this, checked)
+            if (checked) StepService.start(this) else StepService.stop(this)
         }
 
         // ---- weight
@@ -143,6 +145,6 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     companion object {
-        private const val BuildConfig_VERSION_NAME = "1.0.2"
+        private const val BuildConfig_VERSION_NAME = "1.0.3"
     }
 }

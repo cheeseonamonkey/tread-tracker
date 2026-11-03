@@ -6,7 +6,9 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
-import android.app.NotificationManager
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.IntentFilter
 import android.os.Looper
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
@@ -17,7 +19,7 @@ import androidx.viewpager2.widget.ViewPager2
 import dev.treadtracker.app.data.StepDb
 import dev.treadtracker.app.databinding.ActivityMainBinding
 import dev.treadtracker.app.databinding.PageStatsBinding
-import dev.treadtracker.app.sensor.StepRecorder
+import dev.treadtracker.app.service.StepService
 import dev.treadtracker.app.util.Dates
 import dev.treadtracker.app.util.NumFmt
 import dev.treadtracker.app.util.Prefs
@@ -59,14 +61,13 @@ class MainActivity : AppCompatActivity() {
     private val db = lazy { StepDb(this) }
     private val dbExecutor = Executors.newSingleThreadExecutor()
     private val mainHandler = Handler(Looper.getMainLooper())
-    private val recorder by lazy { StepRecorder(this, db.value, dbExecutor) {
-        mainHandler.post {
-            if (!isFinishing && !isDestroyed) {
-                if (periods.lastOrNull()?.end?.let { it < Dates.today() } == true) reload()
-                else refreshCurrentPage()
-            }
+    private val stepReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (periods.lastOrNull()?.end?.let { it < Dates.today() } == true) reload()
+            else refreshCurrentPage()
         }
-    } }
+    }
+    private var stepReceiverRegistered = false
 
     private var currentTab = TAB_DAY
     private val savedPositions = IntArray(3)
@@ -105,25 +106,25 @@ class MainActivity : AppCompatActivity() {
         }
         binding.btnGrant.setOnClickListener { requestNeededPermissions() }
 
-        // Clear any v1.0 foreground notification/channel after upgrading.
-        getSystemService(NotificationManager::class.java)?.apply {
-            cancel(1564)
-            if (Build.VERSION.SDK_INT >= 26) deleteNotificationChannel("step_service")
-        }
-
         styleTabs()
         requestNeededPermissions()
     }
 
     override fun onStart() {
         super.onStart()
+        ContextCompat.registerReceiver(this, stepReceiver,
+            IntentFilter(StepService.ACTION_STEPS_UPDATED),
+            ContextCompat.RECEIVER_NOT_EXPORTED)
+        stepReceiverRegistered = true
         refreshPermissionBanner()
-        if (hasRecognition()) recorder.start()
         reload()
     }
 
     override fun onStop() {
-        recorder.stop()
+        if (stepReceiverRegistered) {
+            unregisterReceiver(stepReceiver)
+            stepReceiverRegistered = false
+        }
         super.onStop()
     }
 
@@ -298,7 +299,7 @@ class MainActivity : AppCompatActivity() {
         val granted = hasRecognition()
         binding.permissionBanner.visibility = if (granted) View.GONE else View.VISIBLE
         if (granted && lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) {
-            recorder.start()
+            StepService.start(this)
         }
     }
 

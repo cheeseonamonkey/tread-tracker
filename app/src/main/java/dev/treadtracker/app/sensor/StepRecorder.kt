@@ -8,7 +8,7 @@ import dev.treadtracker.app.widget.StepsWidget
 import android.os.SystemClock
 import java.util.concurrent.Executor
 
-/** Activity-scoped tracking. Nothing remains running after the app is closed. */
+/** Single service-owned hardware/accelerometer sensor registration. */
 class StepRecorder(
     private val context: Context,
     private val db: StepDb,
@@ -18,7 +18,9 @@ class StepRecorder(
     private var source: StepSource? = null
     private var lastStepAt = 0L
     private var lastWidgetUpdate = 0L
-    private var active = false
+    @Volatile private var active = false
+    val available: Boolean get() = source != null
+    val usesAccelerometer: Boolean get() = source?.isHardware == false
 
     fun start() {
         if (source != null || !Prefs.isCountingEnabled(context)) return

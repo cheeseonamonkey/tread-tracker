@@ -1,10 +1,10 @@
 # Tread Tracker
 
-A small, offline Android step counter. No ads, analytics, accounts, network permission, or persistent notification.
+A small, offline Android step counter. No ads, analytics, accounts, or network permission.
 
 - Hardware step counter, with accelerometer fallback.
 - Daily goal, hourly/day/week/month history, distance, calories, active time.
-- Activity-scoped counting (no foreground service or persistent notification), resize-aware home-screen widget (compact 1×1 to expanded layouts).
+- Persistent foreground health service for background counting (including screen-off and after reboot), resize-aware home-screen widget (compact 1×1 to expanded layouts).
 - Light/dark utilitarian UI, side-profile sneaker icon, Android themed icon.
 - Kotlin and regular Android views; no Compose, Material Components, native libraries, or ad SDKs.
 
@@ -41,13 +41,15 @@ For signed release artifacts and automatic GitHub Releases on version tags, conf
 
 ## Privacy
 
-All step data is stored locally in SQLite. There is no `INTERNET` or `ACCESS_NETWORK_STATE` permission, advertising SDK, analytics SDK, or telemetry endpoint. Counting requires activity recognition on Android 10+. It does not request notification, foreground-service, wake-lock, or battery-exemption permissions. No other personal data is uploaded.
+All step data is stored locally in SQLite. There is no `INTERNET` or `ACCESS_NETWORK_STATE` permission, advertising SDK, analytics SDK, or telemetry endpoint. Counting requires activity recognition on Android 10+. The app requests the Android health foreground-service and wake-lock permissions for continuous operation; it does not request internet or battery-exemption permissions. No other personal data is uploaded.
 
-## Notification-free mode (v1.0.1+)
+## Background counting (v1.0.3+)
 
-The sensor listener runs **only while the app is visible**. Android does not guarantee step counting after it stops; a hardware step counter may retain cumulative steps while it remains activated, but it is **not** a reliable background-history source once unregistered. The app can reconcile same-day changes reported by the hardware sensor, but discards gaps crossing midnight rather than assigning them to the wrong date. Without a hardware counter, accelerometer tracking only works while the app is open. Widgets show the latest stored total and refresh periodically; they do not activate background counting.
+The hardware step counter remains registered in a persistent **health foreground service**, including when the app is closed. The service restarts after boot or an app update when permission has already been granted and counting is enabled. It is designed to be low-power on devices with a hardware counter. Accelerometer-only devices use a partial wake lock and consume more battery.
 
-This trades guaranteed background coverage for absolutely no persistent notification or foreground service.
+**Android requires an ongoing foreground-service notification.** We keep it silent, low-priority, and unchanged during counting. Android 13+ can hide it from the notification drawer if notifications are disabled, but it remains visible in the system foreground-service task manager. Android 12 and earlier generally show the notification. This is the OS tradeoff for reliable background tracking; the app does not bypass it.
+
+Android may terminate services after force-stop, power restrictions, or vendor-specific battery policies; continuous tracking is best-effort within Android's normal lifecycle rules. Hardware step-counter readings are cumulative since boot while activated, but are not timestamped per individual step: a gap spanning midnight cannot be precisely allocated to both days.
 
 ## Installation and data
 
