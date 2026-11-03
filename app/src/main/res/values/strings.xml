@@ -48,7 +48,7 @@
 
     <string name="section_history">Step history</string>
     <string name="edit_steps">Edit</string>
-    <string name="edit_day">Edit a day's steps</string>
+    <string name="edit_day">Edit a day\'s steps</string>
     <string name="edit_steps_for">Steps · %1$s</string>
     <string name="sensor_steps_caption">Recorded by sensor: %1$d steps</string>
     <string name="step_total_hint">Daily step total</string>
