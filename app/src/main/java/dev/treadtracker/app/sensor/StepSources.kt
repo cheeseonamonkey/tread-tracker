@@ -5,6 +5,7 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.os.SystemClock
 import kotlin.math.abs
 import kotlin.math.sqrt
 
@@ -16,7 +17,8 @@ interface StepSource {
     }
 
     val isHardware: Boolean
-    fun start()
+    val available: Boolean
+    fun start(): Boolean
     fun stop()
 }
 
@@ -32,21 +34,59 @@ class HardwareStepSource(
     override val isHardware = true
     private val manager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     private val sensor = manager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
-    val available get() = sensor != null
+    override val available get() = sensor != null
 
-    override fun start() {
-        sensor?.let { manager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL) }
-    }
+    override fun start(): Boolean = sensor?.let {
+        // On supported sensors, buffer reports in the hardware FIFO rather
+        // than waking Android for every single step. Never need a wake lock.
+        manager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL, 60_000_000)
+    } ?: false
+
+    fun flush(): Boolean = manager.flush(this)
 
     override fun stop() = manager.unregisterListener(this)
 
     override fun onSensorChanged(event: SensorEvent) {
         if (event.sensor.type == Sensor.TYPE_STEP_COUNTER) {
-            onReading(event.values[0].toLong(), System.currentTimeMillis())
+            onReading(event.values[0].toLong(), sensorEventWallTime(event))
         }
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
+}
+
+/** Hardware step detector, preferred over CPU-intensive accelerometer processing. */
+class HardwareStepDetectorSource(
+    context: Context,
+    private val listener: StepSource.Listener
+) : StepSource, SensorEventListener {
+    override val isHardware = true
+    private val manager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+    private val sensor = manager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR)
+    override val available get() = sensor != null
+
+    override fun start(): Boolean = sensor?.let {
+        manager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL, 60_000_000)
+    } ?: false
+
+    fun flush(): Boolean = manager.flush(this)
+
+    override fun stop() = manager.unregisterListener(this)
+
+    override fun onSensorChanged(event: SensorEvent) {
+        if (event.sensor.type == Sensor.TYPE_STEP_DETECTOR && event.values[0] > 0f) {
+            listener.onSteps(1, sensorEventWallTime(event))
+        }
+    }
+
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
+}
+
+/** A batched sensor event still belongs to the time it happened, not read time. */
+private fun sensorEventWallTime(event: SensorEvent): Long {
+    val ageMs = ((SystemClock.elapsedRealtimeNanos() - event.timestamp) / 1_000_000L)
+        .coerceAtLeast(0L)
+    return System.currentTimeMillis() - ageMs
 }
 
 /**
@@ -92,12 +132,14 @@ class AccelerometerStepSource(
     /** sensitivity 10..100 -> k 1.6..0.5 (higher sensitivity, lower threshold). */
     private val k = 1.6 - (sensitivity.coerceIn(10, 100) / 100.0) * 1.1
 
-    val available: Boolean get() = sensor != null
+    override val available: Boolean get() = sensor != null
 
-    override fun start() {
-        val s = sensor ?: return
+    override fun start(): Boolean {
+        val s = sensor ?: return false
         reset()
-        sensorManager.registerListener(this, s, SAMPLING_PERIOD_US)
+        // Accelerometer fallback still costs battery. Batch if supported,
+        // but do not lower sampling below what the peak detector requires.
+        return sensorManager.registerListener(this, s, SAMPLING_PERIOD_US, 30_000_000)
     }
 
     override fun stop() {
@@ -147,10 +189,10 @@ class AccelerometerStepSource(
         } else if (magnitude < mean) {
             // Completed a peak: that is one step.
             aboveThreshold = false
-            val now = android.os.SystemClock.elapsedRealtime()
-            if (now - lastStepAt >= MIN_STEP_INTERVAL_MS) {
-                lastStepAt = now
-                listener.onSteps(1, System.currentTimeMillis())
+            val eventAt = event.timestamp / 1_000_000L
+            if (eventAt - lastStepAt >= MIN_STEP_INTERVAL_MS) {
+                lastStepAt = eventAt
+                listener.onSteps(1, sensorEventWallTime(event))
             }
         }
     }

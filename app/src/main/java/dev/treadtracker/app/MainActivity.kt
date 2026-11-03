@@ -80,6 +80,7 @@ class MainActivity : AppCompatActivity() {
     private val permLauncher =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
             refreshPermissionBanner()
+            if (hasRecognition()) StepService.start(this)
         }
 
     // ------------------------------------------------------------- lifecycle
@@ -117,6 +118,7 @@ class MainActivity : AppCompatActivity() {
             ContextCompat.RECEIVER_NOT_EXPORTED)
         stepReceiverRegistered = true
         refreshPermissionBanner()
+        StepService.refresh(this)
         reload()
     }
 
@@ -298,9 +300,7 @@ class MainActivity : AppCompatActivity() {
     private fun refreshPermissionBanner() {
         val granted = hasRecognition()
         binding.permissionBanner.visibility = if (granted) View.GONE else View.VISIBLE
-        if (granted && lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) {
-            StepService.start(this)
-        }
+
     }
 
     // --------------------------------------------------------------- adapter

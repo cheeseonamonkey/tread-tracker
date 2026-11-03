@@ -51,6 +51,14 @@ The hardware step counter remains registered in a persistent **health foreground
 
 Android may terminate services after force-stop, power restrictions, or vendor-specific battery policies; continuous tracking is best-effort within Android's normal lifecycle rules. Hardware step-counter readings are cumulative since boot while activated, but are not timestamped per individual step: a gap spanning midnight cannot be precisely allocated to both days.
 
+## Power and reliability (v1.0.4+)
+
+- Prioritize the hardware **step counter** (low-power, cumulative readings) or hardware **step detector**. Only fall back to the CPU-driven accelerometer if neither is available.
+- Request 60-second hardware sensor batching to minimize processor wakeups. If hardware buffering isn't supported, Android delivers readings when available. Sensor timestamps preserve when events actually occurred.
+- Refresh display data when the app opens; throttle background widget updates and UI refresh broadcasts, rather than writing or waking for every step. Batched step events are grouped for fewer database writes.
+- **Settings → Background reliability** shows the detected sensor and opens system settings for battery restrictions and the foreground-service notification channel. For maximum persistence, allow background activity and select Unrestricted when offered. On Android 12, set the tracking notification to Silent / Minimize when supported; hiding it entirely is not normally possible. On Android 13+, notification permission may be denied without stopping the foreground service.
+- Software accelerometer fallback needs continuous sensor processing and can consume substantial battery; that hardware limitation cannot be solved just by hiding the notification.
+
 ## Installation and data
 
 Package ID: `dev.treadtracker.app`. This is a **new app**, not an in-place update to `com.tayu.tau.pedometer`. The original app's database and preferences are **not migrated**. Back up data from the original app before uninstalling it.

@@ -28,21 +28,28 @@ import java.util.concurrent.Executors
 class StepService : Service() {
     companion object {
         const val ACTION_STEPS_UPDATED = "dev.treadtracker.app.STEPS_UPDATED"
-        private const val CHANNEL = "background_tracking_v2"
+        const val CHANNEL = "background_tracking_v2"
         private const val NOTIFICATION_ID = 7421
-        private const val UPDATE_INTERVAL_MS = 1_500L
+        private const val UPDATE_INTERVAL_MS = 15_000L
+        const val ACTION_REFRESH = "dev.treadtracker.app.REFRESH_STEPS"
 
-        fun start(context: Context) {
+        fun start(context: Context) = start(context, refresh = false)
+
+        fun refresh(context: Context) {
+            start(context, refresh = true)
+        }
+
+        private fun start(context: Context, refresh: Boolean) {
             if (!Prefs.isCountingEnabled(context) ||
                 (Build.VERSION.SDK_INT >= 29 && ContextCompat.checkSelfPermission(
                     context, Manifest.permission.ACTIVITY_RECOGNITION
                 ) != PackageManager.PERMISSION_GRANTED)) return
             try {
-                ContextCompat.startForegroundService(
-                    context.applicationContext, Intent(context, StepService::class.java)
-                )
+                ContextCompat.startForegroundService(context.applicationContext,
+                    Intent(context, StepService::class.java).apply {
+                        if (refresh) action = ACTION_REFRESH
+                    })
             } catch (e: RuntimeException) {
-                // The OS can reject a background start (for example after an app stop).
                 Log.w("TreadTracker", "Background tracking start rejected", e)
             }
         }
@@ -90,9 +97,11 @@ class StepService : Service() {
         }
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int =
-        if (Prefs.isCountingEnabled(this) && ::recorder.isInitialized) START_STICKY
-        else START_NOT_STICKY
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (!Prefs.isCountingEnabled(this) || !::recorder.isInitialized) return START_NOT_STICKY
+        if (intent?.action == ACTION_REFRESH) recorder.flush()
+        return START_STICKY
+    }
 
     override fun onBind(intent: Intent?): IBinder? = null
 

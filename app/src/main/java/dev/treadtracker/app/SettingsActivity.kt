@@ -1,6 +1,13 @@
 package dev.treadtracker.app
 
 import android.os.Bundle
+import android.os.Build
+import android.os.PowerManager
+import android.hardware.Sensor
+import android.hardware.SensorManager
+import android.provider.Settings
+import android.content.Intent
+import android.net.Uri
 import android.text.Spannable
 import android.text.SpannableString
 import android.text.method.LinkMovementMethod
@@ -95,6 +102,29 @@ class SettingsActivity : AppCompatActivity() {
             override fun onStopTrackingTouch(bar: SeekBar?) = Unit
         })
 
+        // ---- reliability: official OS settings; no notification bypasses.
+        val sensors = getSystemService(SENSOR_SERVICE) as SensorManager
+        binding.sensorMode.setText(when {
+            sensors.getDefaultSensor(Sensor.TYPE_STEP_COUNTER) != null -> R.string.sensor_hardware_counter
+            sensors.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR) != null -> R.string.sensor_hardware_detector
+            sensors.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) != null -> R.string.sensor_accelerometer
+            else -> R.string.sensor_unavailable
+        })
+        binding.btnBatterySettings.setOnClickListener {
+            openSettings(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                Uri.fromParts("package", packageName, null)))
+        }
+        binding.btnNotificationSettings.setOnClickListener {
+            val intent = if (Build.VERSION.SDK_INT >= 26) {
+                Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS).apply {
+                    putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                    putExtra(Settings.EXTRA_CHANNEL_ID, StepService.CHANNEL)
+                }
+            } else Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                Uri.fromParts("package", packageName, null))
+            openSettings(intent)
+        }
+
         // ---- about: visible in the installed app, not just the repository.
         val credit = SpannableString(getString(R.string.credit_development))
         val handle = "@cheeseonamonkey"
@@ -111,6 +141,18 @@ class SettingsActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        val power = getSystemService(POWER_SERVICE) as PowerManager
+        binding.batteryStatus.setText(if (power.isIgnoringBatteryOptimizations(packageName))
+            R.string.battery_unrestricted else R.string.battery_optimized)
+    }
+
+    private fun openSettings(intent: Intent) {
+        try {
+            startActivity(intent)
+        } catch (e: android.content.ActivityNotFoundException) {
+            startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                Uri.fromParts("package", packageName, null)))
+        }
     }
 
     override fun onPause() {
@@ -145,6 +187,6 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     companion object {
-        private const val BuildConfig_VERSION_NAME = "1.0.3"
+        private const val BuildConfig_VERSION_NAME = "1.0.4"
     }
 }

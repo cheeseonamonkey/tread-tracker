@@ -14,7 +14,7 @@
     <string name="step_count_label">STEP COUNT</string>
     <string name="your_activity">ACTIVITY</string>
     <string name="swipe_hint">Swipe sideways for earlier days</string>
-    <string name="brand_subtitle">ALWAYS COUNTING</string>
+    <string name="brand_subtitle">LOW-POWER BACKGROUND TRACKING</string>
 
     <string name="permission_banner_text">Step counting needs the Activity Recognition permission.</string>
     <string name="permission_grant">Grant</string>
@@ -44,10 +44,22 @@
     <string name="monday">Mon</string>
     <string name="saturday">Sat</string>
 
-    <string name="tracking_limit">Step counting continues with the app closed. Android requires a quiet foreground-service notification to keep tracking reliably. On Android 13+, you can hide app notifications in system settings without stopping tracking.</string>
+    <string name="tracking_limit">Counting continues after the app closes. Android may still stop it after a force-stop or under device power restrictions. The quiet foreground-service notification is required for reliable operation.</string>
+
+    <string name="section_reliability">Background reliability</string>
+    <string name="sensor_hardware_counter">Sensor: hardware step counter (lowest battery use)</string>
+    <string name="sensor_hardware_detector">Sensor: hardware step detector (low battery use)</string>
+    <string name="sensor_accelerometer">Sensor: accelerometer fallback (higher battery use)</string>
+    <string name="sensor_unavailable">Sensor: no compatible step sensor found</string>
+    <string name="battery_unrestricted">Battery optimizations: exempted</string>
+    <string name="battery_optimized">Battery optimizations: active — background tracking may be stopped</string>
+    <string name="action_battery_settings">Background battery settings</string>
+    <string name="battery_instruction">In the app\'s Battery settings, enable background activity and choose Unrestricted if available. This can improve reliability but may use more power.</string>
+    <string name="action_notification_settings">Make tracking notification quieter</string>
+    <string name="notification_instruction">Open the Background step tracking channel. Choose Silent or Minimize where available. On Android 12, you generally can\'t hide this notification entirely without stopping background tracking. On Android 13+, disabling notifications hides it from the drawer but not the system task manager.</string>
 
     <string name="about_title">About</string>
-    <string name="about_body">Tread Tracker v%1$s. An offline, offline background step counter. No ads, accounts, analytics, or internet access. Your steps stay on your device. Add the widget from your launcher.</string>
+    <string name="about_body">Tread Tracker v%1$s. An offline background step counter. No ads, accounts, analytics, or internet access. Your steps stay on your device. Add the widget from your launcher.</string>
 
     <string name="credit_development">Development: @cheeseonamonkey</string>
     <string name="credit_qa">QA: Stormy (meow)</string>
