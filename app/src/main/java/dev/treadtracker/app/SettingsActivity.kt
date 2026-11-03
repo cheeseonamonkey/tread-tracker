@@ -1,5 +1,7 @@
 package dev.treadtracker.app
 
+import android.app.DatePickerDialog
+import android.widget.Toast
 import android.os.Bundle
 import android.os.Build
 import android.os.PowerManager
@@ -14,12 +16,20 @@ import android.text.method.LinkMovementMethod
 import android.text.style.URLSpan
 import android.widget.SeekBar
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AlertDialog
+import androidx.activity.result.contract.ActivityResultContracts
 import dev.treadtracker.app.databinding.ActivitySettingsBinding
 import dev.treadtracker.app.util.Dates
 import dev.treadtracker.app.util.Prefs
 import dev.treadtracker.app.widget.StepsWidget
+import dev.treadtracker.app.ui.HistoryEditor
+import dev.treadtracker.app.data.HistoryCsv
+import dev.treadtracker.app.data.StepDb
 import dev.treadtracker.app.service.StepService
 import java.util.Locale
+import java.util.Calendar
+import java.util.concurrent.Executors
+import java.nio.charset.StandardCharsets
 
 /**
  * Settings. Plain views instead of the original androidx.preference screen:
@@ -28,6 +38,65 @@ import java.util.Locale
 class SettingsActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivitySettingsBinding
+
+    private val historyExecutor = Executors.newSingleThreadExecutor()
+
+    private val exportPicker = registerForActivityResult(
+        ActivityResultContracts.CreateDocument("text/csv")) { uri ->
+        if (uri == null) return@registerForActivityResult
+        historyExecutor.execute {
+            try {
+                val totals = StepDb(this).use { db ->
+                    val dates = db.distinctDates()
+                    if (dates.isEmpty()) emptyMap() else
+                        db.dayTotals(dates.first(), dates.last())
+                            .mapValues { it.value.steps }
+                }
+                contentResolver.openOutputStream(uri, "wt")?.use { output ->
+                    output.writer(StandardCharsets.UTF_8).use { HistoryCsv.write(it, totals) }
+                } ?: error("Could not open selected destination")
+                runOnUiThread { notifyHistory(getString(R.string.export_complete, totals.size)) }
+            } catch (e: Exception) { historyFailure(e) }
+        }
+    }
+
+    private val importPicker = registerForActivityResult(
+        ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null) return@registerForActivityResult
+        historyExecutor.execute {
+            try {
+                val rows = contentResolver.openInputStream(uri)?.use { input ->
+                    HistoryCsv.parse(input.reader(StandardCharsets.UTF_8))
+                } ?: error("Could not read selected file")
+                runOnUiThread {
+                    if (isFinishing || isDestroyed) return@runOnUiThread
+                    AlertDialog.Builder(this)
+                        .setTitle(R.string.import_csv)
+                        .setMessage(getString(R.string.import_confirm, rows.size))
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .setPositiveButton(R.string.save) { _, _ ->
+                            historyExecutor.execute {
+                                try {
+                                    StepDb(this).use { it.setDailyTotals(rows) }
+                                    StepsWidget.refresh(this)
+                                    runOnUiThread { notifyHistory(getString(R.string.import_complete, rows.size)) }
+                                } catch (e: Exception) { historyFailure(e) }
+                            }
+                        }
+                        .show()
+                }
+            } catch (e: Exception) { historyFailure(e) }
+        }
+    }
+
+    private fun notifyHistory(message: String) {
+        if (!isFinishing && !isDestroyed)
+            Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+    }
+
+    private fun historyFailure(e: Exception) {
+        runOnUiThread { notifyHistory(e.message ?: getString(R.string.history_error)) }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -102,6 +171,25 @@ class SettingsActivity : AppCompatActivity() {
             override fun onStopTrackingTouch(bar: SeekBar?) = Unit
         })
 
+        // ---- local history controls and storage-access-framework pickers
+        binding.btnEditHistory.setOnClickListener {
+            val today = Calendar.getInstance()
+            DatePickerDialog(this, { _, year, month, day ->
+                val chosen = Calendar.getInstance().apply {
+                    set(year, month, day, 12, 0, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+                HistoryEditor.show(this, Dates.dayStart(chosen.timeInMillis), historyExecutor) {
+                    StepsWidget.refresh(this)
+                }
+            }, today.get(Calendar.YEAR), today.get(Calendar.MONTH),
+                today.get(Calendar.DAY_OF_MONTH)).apply {
+                datePicker.maxDate = System.currentTimeMillis()
+            }.show()
+        }
+        binding.btnExportCsv.setOnClickListener { exportPicker.launch("TreadTracker-steps.csv") }
+        binding.btnImportCsv.setOnClickListener { importPicker.launch(arrayOf("*/*")) }
+
         // ---- reliability: official OS settings; no notification bypasses.
         val sensors = getSystemService(SENSOR_SERVICE) as SensorManager
         binding.sensorMode.setText(when {
@@ -162,6 +250,7 @@ class SettingsActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         persist()
+        historyExecutor.shutdown()
         super.onDestroy()
     }
 
@@ -187,6 +276,6 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     companion object {
-        private const val BuildConfig_VERSION_NAME = "1.0.4"
+        private const val BuildConfig_VERSION_NAME = "1.0.5"
     }
 }

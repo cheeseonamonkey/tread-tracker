@@ -46,6 +46,25 @@
 
     <string name="tracking_limit">Counting continues after the app closes. Android may still stop it after a force-stop or under device power restrictions. The quiet foreground-service notification is required for reliable operation.</string>
 
+    <string name="section_history">Step history</string>
+    <string name="edit_steps">Edit</string>
+    <string name="edit_day">Edit a day's steps</string>
+    <string name="edit_steps_for">Steps · %1$s</string>
+    <string name="sensor_steps_caption">Recorded by sensor: %1$d steps</string>
+    <string name="step_total_hint">Daily step total</string>
+    <string name="manual_steps_explanation">Your correction stays separate from automatic tracking. New sensor steps continue adding to this total.</string>
+    <string name="save">Save</string>
+    <string name="reset_adjustment">Reset correction</string>
+    <string name="history_saved">Step history updated</string>
+    <string name="history_error">Could not update history</string>
+    <string name="invalid_steps">Enter 0 to 1,000,000 steps</string>
+    <string name="import_csv">Import CSV</string>
+    <string name="export_csv">Export CSV</string>
+    <string name="csv_explanation">Offline CSV: date,steps (YYYY-MM-DD). Import adjusts only listed days and keeps sensor history intact. Export saves all displayed daily totals.</string>
+    <string name="import_confirm">Apply %1$d daily totals from CSV? Existing automatic sensor readings are preserved; imported totals become corrections.</string>
+    <string name="import_complete">Imported %1$d days</string>
+    <string name="export_complete">Exported %1$d days</string>
+
     <string name="section_reliability">Background reliability</string>
     <string name="sensor_hardware_counter">Sensor: hardware step counter (lowest battery use)</string>
     <string name="sensor_hardware_detector">Sensor: hardware step detector (low battery use)</string>

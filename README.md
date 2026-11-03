@@ -54,10 +54,18 @@ Android may terminate services after force-stop, power restrictions, or vendor-s
 ## Power and reliability (v1.0.4+)
 
 - Prioritize the hardware **step counter** (low-power, cumulative readings) or hardware **step detector**. Only fall back to the CPU-driven accelerometer if neither is available.
-- Request 60-second hardware sensor batching to minimize processor wakeups. If hardware buffering isn't supported, Android delivers readings when available. Sensor timestamps preserve when events actually occurred.
-- Refresh display data when the app opens; throttle background widget updates and UI refresh broadcasts, rather than writing or waking for every step. Batched step events are grouped for fewer database writes.
+- Register the hardware counter without polling. Prefer prompt delivery/persistence over 60-second batching, reducing steps lost during abrupt termination or reboot. Sensor timestamps preserve when events occurred.
+- Refresh display data when the app opens; throttle widget/UI refreshes, but commit detected steps immediately rather than leaving them uncommitted in memory.
 - **Settings → Background reliability** shows the detected sensor and opens system settings for battery restrictions and the foreground-service notification channel. For maximum persistence, allow background activity and select Unrestricted when offered. On Android 12, set the tracking notification to Silent / Minimize when supported; hiding it entirely is not normally possible. On Android 13+, notification permission may be denied without stopping the foreground service.
 - Software accelerometer fallback needs continuous sensor processing and can consume substantial battery; that hardware limitation cannot be solved just by hiding the notification.
+
+## Editing and CSV (v1.0.5+)
+
+- Tap **Edit** on any day to set its displayed step count or reset its manual adjustment. Or open **Settings → Step history → Edit a day's steps** and select a date (including days with no previous data).
+- Manual edits are stored separately as daily **corrections**. They do not replace sensor measurements or the cumulative hardware checkpoint. Steps subsequently recorded by the sensor continue increasing the displayed total.
+- **Settings → Step history → Export CSV** exports local daily totals to a file you choose, using `date,steps` columns (ISO dates and nonnegative integer steps). **Import CSV** accepts the same format, previews the number of dates, and requires confirmation before applying.
+- Import updates **only listed dates**, atomically; it leaves other days and all sensor history unchanged. The file is parsed and validated completely *before* any database modification (duplicate/invalid dates, invalid counts and excessive file sizes are rejected). Export/import needs no storage or network permission.
+- CSV is a **daily totals snapshot**, not a raw sensor or per-hour backup. If importing another device's data, the imported totals become corrections relative to this device's existing counts. Hourly views scale existing recorded hours proportionally; an imported day without recorded hours is displayed in an illustrative noon bucket, not an inferred walking time.
 
 ## Installation and data
 

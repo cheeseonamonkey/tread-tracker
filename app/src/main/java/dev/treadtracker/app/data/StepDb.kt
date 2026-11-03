@@ -6,6 +6,7 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteException
 import dev.treadtracker.app.util.Dates
 import android.database.sqlite.SQLiteOpenHelper
+import dev.treadtracker.app.util.Prefs
 
 /**
  * Step storage. The database name, table name and columns are identical to
@@ -16,12 +17,12 @@ import android.database.sqlite.SQLiteOpenHelper
  * Rows are keyed by (date=local-midnight-millis, hour=0..23); each row holds
  * absolute totals for that hour.
  */
-class StepDb(context: Context) :
+class StepDb(private val context: Context) :
     SQLiteOpenHelper(context.applicationContext, DB_NAME, null, DB_VERSION) {
 
     companion object {
         const val DB_NAME = "DAY_WALK_COUNT"
-        const val DB_VERSION = 1
+        const val DB_VERSION = 2
         const val TABLE = "DAY_WALK_COUNT"
         const val COL_ID = "_id"
         const val COL_DATE = "date"
@@ -40,6 +41,10 @@ class StepDb(context: Context) :
                 "$COL_CAL REAL," +
                 "$COL_WALK_TIME INTEGER," +
                 "$COL_DISTANCE INTEGER)"
+
+        private const val MANUAL_TABLE = "daily_manual_delta"
+        private const val MANUAL_SQL =
+            "CREATE TABLE IF NOT EXISTS $MANUAL_TABLE(date INTEGER PRIMARY KEY, delta INTEGER NOT NULL)"
 
         private const val CHECKPOINT_SQL =
             "CREATE TABLE IF NOT EXISTS sensor_checkpoint(" +
@@ -76,18 +81,19 @@ class StepDb(context: Context) :
         db.execSQL(CREATE_SQL)
         db.execSQL(UNIQUE_INDEX_SQL)
         db.execSQL(CHECKPOINT_SQL)
+        db.execSQL(MANUAL_SQL)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        // The original app did the same (v1 only).
-        db.execSQL("DROP TABLE IF EXISTS $TABLE")
-        onCreate(db)
+        // Additive migration: never discard steps, checkpoints, or corrections.
+        if (oldVersion < 2) db.execSQL(MANUAL_SQL)
     }
 
     override fun onOpen(db: SQLiteDatabase) {
         super.onOpen(db)
         ensureUniqueIndex(db)
         db.execSQL(CHECKPOINT_SQL)
+        db.execSQL(MANUAL_SQL)
     }
 
     /**
@@ -199,6 +205,53 @@ class StepDb(context: Context) :
         }
     }
 
+    /** Sensor-only daily total, excluding user corrections. */
+    fun sensorDayTotal(date: Long): Long = rawDayTotal(readableDatabase, date)
+
+    /**
+     * Set a *correction* relative to the current sensor count. Future sensor
+     * samples still increment the visible count; the sensor checkpoint remains
+     * untouched. Runs atomically with sensor transactions on the same DB.
+     */
+    fun setDailyTotal(date: Long, total: Long) = setDailyTotals(mapOf(date to total))
+
+    fun setDailyTotals(totals: Map<Long, Long>) {
+        require(totals.values.all { it in 0..HistoryCsv.MAX_STEPS })
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            for ((date, target) in totals) {
+                require(date == Dates.dayStart(date))
+                val delta = CorrectionMath.deltaForTarget(rawDayTotal(db, date), target)
+                if (delta == 0L) db.delete(MANUAL_TABLE, "date=?", arrayOf(date.toString()))
+                else db.execSQL("INSERT OR REPLACE INTO $MANUAL_TABLE(date,delta) VALUES(?,?)",
+                    arrayOf(date, delta))
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    fun clearDailyCorrection(date: Long) {
+        writableDatabase.delete(MANUAL_TABLE, "date=?", arrayOf(date.toString()))
+    }
+
+    private fun rawDayTotal(db: SQLiteDatabase, date: Long): Long =
+        db.rawQuery("SELECT COALESCE(SUM($COL_COUNT),0) FROM $TABLE WHERE $COL_DATE=?",
+            arrayOf(date.toString())).use {
+            if (it.moveToFirst()) it.getLong(0) else 0L
+        }
+
+    private fun manualDeltas(db: SQLiteDatabase, from: Long, to: Long): Map<Long, Long> {
+        val result = LinkedHashMap<Long, Long>()
+        db.query(MANUAL_TABLE, arrayOf("date", "delta"), "date BETWEEN ? AND ?",
+            arrayOf(from.toString(), to.toString()), null, null, null).use { c ->
+            while (c.moveToNext()) result[c.getLong(0)] = c.getLong(1)
+        }
+        return result
+    }
+
     /** Per-hour rows for one date; missing hours map to null. */
     fun hourRows(date: Long): Array<HourRow?> {
         val result = arrayOfNulls<HourRow>(24)
@@ -218,6 +271,32 @@ class StepDb(context: Context) :
                         distanceMeters = c.getDouble(4)
                     )
                 }
+            }
+        }
+        val delta = manualDeltas(readableDatabase, date, date)[date] ?: 0L
+        if (delta != 0L) {
+            val raw = result.sumOf { it?.steps ?: 0L }
+            val corrected = CorrectionMath.displayed(raw, delta)
+            if (raw > 0L) {
+                // Scale existing hours proportionally; don't invent a peak hour.
+                val factor = corrected.toDouble() / raw
+                var accounted = 0L
+                var rawAccum = 0L
+                for (i in result.indices) {
+                    result[i]?.let { hour ->
+                        rawAccum += hour.steps
+                        val next = (rawAccum * factor).toLong().coerceAtMost(corrected)
+                        hour.cal *= factor
+                        hour.distanceMeters *= factor
+                        hour.steps = next - accounted
+                        accounted = next
+                    }
+                }
+            } else if (corrected > 0L) {
+                // Imported daily totals cannot imply a real walking hour.
+                result[12] = HourRow(corrected,
+                    corrected * Prefs.kcalPerStep(context), 0L,
+                    corrected * Prefs.metersPerStep(context))
             }
         }
         return result
@@ -248,6 +327,18 @@ class StepDb(context: Context) :
                 )
             }
         }
+        for ((date, delta) in manualDeltas(readableDatabase, from, to)) {
+            val raw = result[date] ?: DayTotal()
+            val total = CorrectionMath.displayed(raw.steps, delta)
+            val ratio = if (raw.steps > 0L) total.toDouble() / raw.steps else 0.0
+            result[date] = raw.copy(
+                steps = total,
+                cal = if (raw.steps > 0L) raw.cal * ratio
+                    else total * Prefs.kcalPerStep(context),
+                distanceMeters = if (raw.steps > 0L) raw.distanceMeters * ratio
+                    else total * Prefs.metersPerStep(context)
+            )
+        }
         return result
     }
 
@@ -256,9 +347,9 @@ class StepDb(context: Context) :
     /** All dates that have at least one row, oldest first. */
     fun distinctDates(): List<Long> {
         val result = ArrayList<Long>()
-        readableDatabase.query(
-            true, TABLE, arrayOf(COL_DATE), null, null,
-            null, null, "$COL_DATE ASC", null
+        readableDatabase.rawQuery(
+            "SELECT $COL_DATE FROM $TABLE UNION SELECT date FROM $MANUAL_TABLE ORDER BY 1",
+            null
         ).use { c ->
             while (c.moveToNext()) result.add(c.getLong(0))
         }

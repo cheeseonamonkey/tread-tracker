@@ -37,9 +37,9 @@ class HardwareStepSource(
     override val available get() = sensor != null
 
     override fun start(): Boolean = sensor?.let {
-        // On supported sensors, buffer reports in the hardware FIFO rather
-        // than waking Android for every single step. Never need a wake lock.
-        manager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL, 60_000_000)
+        // Deliver counter changes promptly: prefer persistence over FIFO latency.
+        // Step detection still runs in hardware without a wake lock.
+        manager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL, 0)
     } ?: false
 
     fun flush(): Boolean = manager.flush(this)
@@ -66,7 +66,7 @@ class HardwareStepDetectorSource(
     override val available get() = sensor != null
 
     override fun start(): Boolean = sensor?.let {
-        manager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL, 60_000_000)
+        manager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL, 0)
     } ?: false
 
     fun flush(): Boolean = manager.flush(this)
@@ -137,9 +137,8 @@ class AccelerometerStepSource(
     override fun start(): Boolean {
         val s = sensor ?: return false
         reset()
-        // Accelerometer fallback still costs battery. Batch if supported,
-        // but do not lower sampling below what the peak detector requires.
-        return sensorManager.registerListener(this, s, SAMPLING_PERIOD_US, 30_000_000)
+        // Software fallback needs continuous samples; avoid FIFO latency/loss.
+        return sensorManager.registerListener(this, s, SAMPLING_PERIOD_US, 0)
     }
 
     override fun stop() {

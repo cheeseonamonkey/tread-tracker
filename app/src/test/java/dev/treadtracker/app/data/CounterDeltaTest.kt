@@ -23,7 +23,7 @@ class CounterDeltaTest {
         assertEquals(0, CounterDelta.between(500, Dates.addDays(today,-1), 800, today + 60_000))
     }
 
-    @Test fun impossibleBatchIsCapped() {
-        assertEquals(100_000, CounterDelta.between(0, today, 200_000, today + 60_000))
+    @Test fun validLargeCounterGapIsNotSilentlyClipped() {
+        assertEquals(200_000, CounterDelta.between(0, today, 200_000, today + 60_000))
     }
 }

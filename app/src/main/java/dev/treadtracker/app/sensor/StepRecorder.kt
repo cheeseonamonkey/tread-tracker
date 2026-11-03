@@ -6,8 +6,6 @@ import dev.treadtracker.app.util.Prefs
 import dev.treadtracker.app.util.Dates
 import dev.treadtracker.app.widget.StepsWidget
 import android.os.SystemClock
-import android.os.Handler
-import android.os.Looper
 import java.util.concurrent.Executor
 
 /** Single service-owned hardware/accelerometer sensor registration. */
@@ -19,11 +17,6 @@ class StepRecorder(
 ) : StepSource.Listener {
     private var source: StepSource? = null
     private var lastStepAt = 0L
-    private val mainHandler = Handler(Looper.getMainLooper())
-    private var pendingCount = 0
-    private var pendingWalkMs = 0L
-    private var pendingAt = 0L
-    private val flushRunnable = Runnable { flushPending() }
     private var lastWidgetUpdate = 0L
     private val widgetIntervalMs = 60_000L
     @Volatile private var active = false
@@ -52,7 +45,6 @@ class StepRecorder(
 
     /** Ask the hardware FIFO to deliver recent steps when the app opens. */
     fun flush() {
-        flushPending()
         when (val current = source) {
             is HardwareStepSource -> current.flush()
             is HardwareStepDetectorSource -> current.flush()
@@ -63,7 +55,6 @@ class StepRecorder(
         active = false
         source?.stop()
         source = null
-        flushPending()
         lastStepAt = 0L
     }
 
@@ -76,35 +67,17 @@ class StepRecorder(
         onChanged()
     }
 
-    private fun flushPending() {
-        mainHandler.removeCallbacks(flushRunnable)
-        if (pendingCount == 0) return
-        val count = pendingCount
-        val time = pendingAt
-        val activeMs = pendingWalkMs
-        pendingCount = 0
-        pendingWalkMs = 0
-        executor.execute {
-            db.recordSteps(count, time, Prefs.kcalPerStep(context),
-                Prefs.metersPerStep(context), activeMs)
-            changed()
-        }
-    }
-
     override fun onSteps(count: Int, eventTimeMillis: Long) {
         if (!active || count <= 0) return
         val activeMs = if (lastStepAt > 0 &&
             eventTimeMillis - lastStepAt in 1..3_000) eventTimeMillis - lastStepAt else 0L
         lastStepAt = eventTimeMillis
-        if (pendingCount > 0 && StepBatchPolicy.crossesHour(pendingAt, eventTimeMillis)) {
-            flushPending()
+        // Commit every detected step without retaining an uncommitted buffer.
+        // More DB transactions than batching, but fewer steps lost on process death.
+        executor.execute {
+            db.recordSteps(count, eventTimeMillis, Prefs.kcalPerStep(context),
+                Prefs.metersPerStep(context), activeMs)
+            changed()
         }
-        if (pendingCount == 0) {
-            pendingAt = eventTimeMillis
-            mainHandler.postDelayed(flushRunnable, StepBatchPolicy.MAX_DELAY_MS)
-        }
-        pendingCount += count
-        pendingWalkMs += activeMs
-        if (pendingCount >= StepBatchPolicy.MAX_STEPS) flushPending()
     }
 }

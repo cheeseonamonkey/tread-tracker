@@ -20,6 +20,8 @@ import dev.treadtracker.app.data.StepDb
 import dev.treadtracker.app.databinding.ActivityMainBinding
 import dev.treadtracker.app.databinding.PageStatsBinding
 import dev.treadtracker.app.service.StepService
+import dev.treadtracker.app.ui.HistoryEditor
+import dev.treadtracker.app.widget.StepsWidget
 import dev.treadtracker.app.util.Dates
 import dev.treadtracker.app.util.NumFmt
 import dev.treadtracker.app.util.Prefs
@@ -333,6 +335,13 @@ class MainActivity : AppCompatActivity() {
 
         fun bind(period: Period) {
             boundPeriod = period
+            page.btnEditSteps.visibility = if (period.type == TAB_DAY) View.VISIBLE else View.GONE
+            page.btnEditSteps.setOnClickListener(if (period.type == TAB_DAY) View.OnClickListener {
+                HistoryEditor.show(this@MainActivity, period.start, dbExecutor) {
+                    reload()
+                    StepsWidget.refresh(this@MainActivity)
+                }
+            } else null)
             pageCache[period]?.let { render(period, it) }
             dbExecutor.execute {
                 val data = loadPageData(period)

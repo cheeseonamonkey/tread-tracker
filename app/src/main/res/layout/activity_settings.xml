@@ -252,6 +252,44 @@
             android:textColor="@color/text_secondary"
             android:textSize="13sp" />
 
+        <!-- Offline step history editing and file import/export. -->
+        <TextView
+            style="@style/SettingsSection"
+            android:text="@string/section_history" />
+
+        <Button
+            android:id="@+id/btn_edit_history"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/edit_day" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <Button
+                android:id="@+id/btn_import_csv"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="@string/import_csv" />
+            <Button
+                android:id="@+id/btn_export_csv"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="@string/export_csv" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/csv_explanation"
+            android:textColor="@color/text_secondary"
+            android:textSize="12sp" />
+
         <!-- Android background reliability controls. No privileged permissions. -->
         <TextView
             style="@style/SettingsSection"
